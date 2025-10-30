@@ -5,7 +5,6 @@ from typing import List, Optional
 from . import models, schemas
 from datetime import datetime
 
-
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -14,7 +13,6 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
-
 
 # USER CRUD
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
@@ -25,7 +23,8 @@ def create_user(db: Session, user: schemas.UserCreate) -> models.User:
         name=user.name,
         email=user.email,
         password=hash_password(user.password),
-        phone=user.phone
+        phone=user.phone,
+        role=user.role or "customer"
     )
     db.add(db_user)
     db.commit()
@@ -45,6 +44,8 @@ def update_user(db: Session, user: models.User, update: schemas.UserUpdate) -> m
         user.phone = update.phone
     if update.password:
         user.password = hash_password(update.password)
+    if update.role:
+        user.role = update.role
     db.commit()
     db.refresh(user)
     return user
@@ -56,7 +57,6 @@ def del_user(db: Session, user_id: int) -> Optional[models.User]:
         db.commit()
     return user
 
-
 # PRODUCT CRUD
 def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[models.Product]:
     return db.query(models.Product).offset(skip).limit(limit).all()
@@ -64,13 +64,47 @@ def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[models.Pr
 def get_product(db: Session, product_id: int) -> Optional[models.Product]:
     return db.query(models.Product).filter(models.Product.id == product_id).first()
 
-def create_product(db: Session, product: schemas.ProductBase) -> models.Product:
-    db_product = models.Product(**product.dict())
+def create_product(db: Session, product: schemas.ProductBase, seller_id: int = None) -> models.Product:
+    product_data = product.dict()
+    if seller_id:
+        product_data["seller_id"] = seller_id
+    db_product = models.Product(**product_data)
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
     return db_product
 
+def get_products_by_seller(db: Session, seller_id: int) -> List[models.Product]:
+    return db.query(models.Product).filter(models.Product.seller_id == seller_id).all()
+
+def update_product(db: Session, product_id: int, update: schemas.ProductBase, seller_id: int = None) -> Optional[models.Product]:
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        return None
+    
+    # If seller_id provided, check ownership
+    if seller_id and product.seller_id != seller_id:
+        return None
+    
+    for key, value in update.dict(exclude_unset=True).items():
+        setattr(product, key, value)
+    
+    db.commit()
+    db.refresh(product)
+    return product
+
+def delete_product(db: Session, product_id: int, user_id: int = None, user_role: str = None) -> Optional[models.Product]:
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        return None
+    
+    # Admin can delete any product, seller can only delete their own
+    if user_role == "admin" or (user_role == "seller" and product.seller_id == user_id):
+        db.delete(product)
+        db.commit()
+        return product
+    
+    return None
 
 # CART CRUD
 def get_cart(db: Session, user_id: int) -> Optional[models.Cart]:
@@ -104,7 +138,6 @@ def remove_cart_item(db: Session, cart_item_id: int) -> Optional[models.CartItem
         db.delete(item)
         db.commit()
     return item
-
 
 # ORDER CRUD
 def create_order(db: Session, order: schemas.OrderBase, user_id: int, items: List[schemas.OrderItemBase]) -> models.Order:
@@ -160,7 +193,6 @@ def create_order_from_cart_for_user(db: Session, user_id: int) -> models.Order:
 
     return order
 
-
 # CATEGORY CRUD
 def create_category(db: Session, category: schemas.CategoryCreate):
     db_category = models.Category(**category.model_dump())
@@ -172,6 +204,26 @@ def create_category(db: Session, category: schemas.CategoryCreate):
 def get_categories(db: Session):
     return db.query(models.Category).all()
 
+def update_category(db: Session, category_id: int, update: schemas.CategoryCreate):
+    category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not category:
+        return None
+    
+    for key, value in update.dict(exclude_unset=True).items():
+        setattr(category, key, value)
+    
+    db.commit()
+    db.refresh(category)
+    return category
+
+def delete_category(db: Session, category_id: int):
+    category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not category:
+        return None
+    
+    db.delete(category)
+    db.commit()
+    return category
 
 # ADDRESS CRUD
 def create_address(db: Session, user_id: int, address: schemas.AddressCreate):
@@ -193,28 +245,6 @@ def update_address(db: Session, db_address: models.Address, update: schemas.Addr
     db.commit()
     db.refresh(db_address)
     return db_address
-
-
-# REVIEW CRUD
-# def create_review(db: Session, review: schemas.ReviewBase, user_id: int) -> models.Review:
-#     db_review = models.Review(user_id=user_id, **review.model_dump())
-#     db.add(db_review)
-#     db.commit()
-#     db.refresh(db_review)
-#     return db_review
-
-
-# # WISHLIST CRUD
-# def add_wishlist_item(db: Session, item: schemas.WishlistBase, user_id: int) -> models.Wishlist:
-#     db_item = models.Wishlist(user_id=user_id, **item.model_dump())
-#     db.add(db_item)
-#     db.commit()
-#     db.refresh(db_item)
-#     return db_item
-
-# def get_wishlist(db: Session, user_id: int) -> List[models.Wishlist]:
-#     return db.query(models.Wishlist).filter(models.Wishlist.user_id == user_id).all()
-
 
 # WISHLIST
 def add_to_wishlist(db: Session, user_id: int, product_id: int) -> models.Wishlist:
@@ -241,7 +271,6 @@ def remove_from_wishlist(db: Session, wishlist_id: int):
     db.commit()
     return item
 
-
 # REVIEWS 
 def create_review(db: Session, user_id: int, review: schemas.ReviewCreate) -> models.Review:
     if review.rating < 1 or review.rating > 5:
@@ -259,7 +288,6 @@ def create_review(db: Session, user_id: int, review: schemas.ReviewCreate) -> mo
 
 def get_reviews_for_product(db: Session, product_id: int):
     return db.query(models.Review).filter(models.Review.product_id == product_id).all()
-
 
 # SHIPMENTS 
 def create_shipment(db: Session, shipment_in: schemas.ShipmentCreate) -> models.Shipment:
@@ -288,3 +316,6 @@ def update_shipment_status(db: Session, shipment_id: int, status: str):
     db.commit()
     db.refresh(shipment)
     return shipment
+
+def get_shipments(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Shipment).offset(skip).limit(limit).all()

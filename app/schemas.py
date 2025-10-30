@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = None
+    role: Optional[str] = "customer"
 
 class UserCreate(UserBase):
     password: str
@@ -15,13 +16,15 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     password: Optional[str] = None
+    role: Optional[str] = None
 
 class User(UserBase):
     id: int
+    is_active: bool
     created_at: datetime
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # ADDRESS SCHEMAS
 class AddressBase(BaseModel):
@@ -46,8 +49,7 @@ class AddressCreate(AddressBase):
     pass
 
     class Config:
-        from_attribute = True
-
+        from_attributes = True
 
 # CATEGORY SCHEMAS
 class CategoryBase(BaseModel):
@@ -58,7 +60,10 @@ class Category(CategoryBase):
     id: int
 
     class Config:
-        from_attribute = True
+        from_attributes = True
+
+class CategoryCreate(CategoryBase):
+    pass
 
 # PRODUCT SCHEMAS
 class ProductBase(BaseModel):
@@ -67,12 +72,14 @@ class ProductBase(BaseModel):
     price: float
     stock: int
     category_id: int
+    seller_id: Optional[int] = None
 
 class Product(ProductBase):
     id: int
+    seller: Optional[User] = None
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # CART SCHEMAS
 class CartItemBase(BaseModel):
@@ -85,7 +92,7 @@ class CartItem(CartItemBase):
     product: Product
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 class Cart(BaseModel):
     id: int
@@ -93,13 +100,12 @@ class Cart(BaseModel):
     items: List[CartItem] = []
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # ORDER SCHEMAS
 class OrderFromCart(BaseModel):
     cart_id: int
     address_id: int
-
 
 class OrderItemBase(BaseModel):
     product_id: int
@@ -112,7 +118,7 @@ class OrderItem(OrderItemBase):
     product: Product
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 class OrderBase(BaseModel):
     address_id: int
@@ -126,7 +132,7 @@ class Order(OrderBase):
     items: List[OrderItem] = []
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # REVIEW SCHEMAS
 class ReviewBase(BaseModel):
@@ -143,7 +149,7 @@ class ReviewResponse(ReviewBase):
     created_at: datetime
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # WISHLIST SCHEMAS
 class WishlistBase(BaseModel):
@@ -158,21 +164,7 @@ class WishlistResponse(WishlistBase):
     product: Product
 
     class Config:
-        from_attribute = True
-
-# CATEGORY SCHEMAS
-class CategoryBase(BaseModel):
-    name: str
-    description: str | None = None
-
-class CategoryCreate(CategoryBase):
-    pass
-
-class Category(CategoryBase):
-    id: int
-
-    class Config:
-        from_attribute = True
+        from_attributes = True
 
 # AUTH SCHEMAS
 class Token(BaseModel):
@@ -182,9 +174,10 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: int
     email: Optional[str] = None
+    role: Optional[str] = None
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 # SHIPMENT SCHEMAS
 class ShipmentBase(BaseModel):
@@ -200,4 +193,4 @@ class ShipmentResponse(ShipmentBase):
     id: int
 
     class Config:
-        from_attribute = True
+        from_attributes = True
