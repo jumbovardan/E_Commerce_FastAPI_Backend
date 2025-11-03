@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 
+
 # USER SCHEMAS
 class UserBase(BaseModel):
     name: str
@@ -9,14 +10,17 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     role: Optional[str] = "customer"
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     password: Optional[str] = None
     role: Optional[str] = None
+
 
 class User(UserBase):
     id: int
@@ -26,6 +30,7 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+
 # ADDRESS SCHEMAS
 class AddressBase(BaseModel):
     street: str
@@ -34,6 +39,7 @@ class AddressBase(BaseModel):
     country: str
     postal_code: str
 
+
 class AddressUpdate(BaseModel):
     street: Optional[str] = None
     city: Optional[str] = None
@@ -41,9 +47,11 @@ class AddressUpdate(BaseModel):
     country: Optional[str] = None
     postal_code: Optional[str] = None
 
+
 class Address(AddressBase):
     id: int
     user_id: int
+
 
 class AddressCreate(AddressBase):
     pass
@@ -51,10 +59,12 @@ class AddressCreate(AddressBase):
     class Config:
         from_attributes = True
 
+
 # CATEGORY SCHEMAS
 class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
+
 
 class Category(CategoryBase):
     id: int
@@ -62,8 +72,10 @@ class Category(CategoryBase):
     class Config:
         from_attributes = True
 
+
 class CategoryCreate(CategoryBase):
     pass
+
 
 # PRODUCT SCHEMAS
 class ProductBase(BaseModel):
@@ -74,6 +86,7 @@ class ProductBase(BaseModel):
     category_id: int
     seller_id: Optional[int] = None
 
+
 class Product(ProductBase):
     id: int
     seller: Optional[User] = None
@@ -81,10 +94,12 @@ class Product(ProductBase):
     class Config:
         from_attributes = True
 
+
 # CART SCHEMAS
 class CartItemBase(BaseModel):
     product_id: int
     quantity: int
+
 
 class CartItem(CartItemBase):
     id: int
@@ -94,6 +109,7 @@ class CartItem(CartItemBase):
     class Config:
         from_attributes = True
 
+
 class Cart(BaseModel):
     id: int
     user_id: int
@@ -102,15 +118,18 @@ class Cart(BaseModel):
     class Config:
         from_attributes = True
 
+
 # ORDER SCHEMAS
 class OrderFromCart(BaseModel):
     cart_id: int
     address_id: int
 
+
 class OrderItemBase(BaseModel):
     product_id: int
     quantity: int
     price: float
+
 
 class OrderItem(OrderItemBase):
     id: int
@@ -120,9 +139,11 @@ class OrderItem(OrderItemBase):
     class Config:
         from_attributes = True
 
+
 class OrderBase(BaseModel):
     address_id: int
     total_amount: float
+
 
 class Order(OrderBase):
     id: int
@@ -134,14 +155,17 @@ class Order(OrderBase):
     class Config:
         from_attributes = True
 
+
 # REVIEW SCHEMAS
 class ReviewBase(BaseModel):
     product_id: int
     rating: int
     comment: Optional[str] = None
 
+
 class ReviewCreate(ReviewBase):
     pass
+
 
 class ReviewResponse(ReviewBase):
     id: int
@@ -151,12 +175,15 @@ class ReviewResponse(ReviewBase):
     class Config:
         from_attributes = True
 
+
 # WISHLIST SCHEMAS
 class WishlistBase(BaseModel):
     product_id: int
 
+
 class WishlistCreate(WishlistBase):
     pass
+
 
 class WishlistResponse(WishlistBase):
     id: int
@@ -166,10 +193,12 @@ class WishlistResponse(WishlistBase):
     class Config:
         from_attributes = True
 
+
 # AUTH SCHEMAS
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class TokenData(BaseModel):
     user_id: int
@@ -179,6 +208,7 @@ class TokenData(BaseModel):
     class Config:
         from_attributes = True
 
+
 # SHIPMENT SCHEMAS
 class ShipmentBase(BaseModel):
     order_id: int
@@ -186,8 +216,10 @@ class ShipmentBase(BaseModel):
     carrier: Optional[str] = None
     status: Optional[str] = None
 
+
 class ShipmentCreate(ShipmentBase):
     pass
+
 
 class ShipmentResponse(ShipmentBase):
     id: int

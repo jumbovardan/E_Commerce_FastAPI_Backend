@@ -18,7 +18,7 @@ def verify_password(plain_password, hashed_password):
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
-def create_user(db: Session, user: schemas.UserCreate) -> models.User:
+def Signup(db: Session, user: schemas.UserCreate) -> models.User:
     db_user = models.User(
         name=user.name,
         email=user.email,
@@ -118,6 +118,13 @@ def create_cart(db: Session, user_id: int) -> models.Cart:
     return cart
 
 def add_cart_item(db: Session, cart_id: int, item: schemas.CartItemBase) -> models.CartItem:
+    product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+    if not product:
+        raise ValueError("Product not found")
+
+    if product.stock is not None and item.quantity > product.stock:
+        raise ValueError("Insufficient stock")
+
     db_item = models.CartItem(cart_id=cart_id, **item.dict())
     db.add(db_item)
     db.commit()
@@ -134,10 +141,15 @@ def update_cart_item(db: Session, cart_item_id: int, quantity: int) -> models.Ca
 
 def remove_cart_item(db: Session, cart_item_id: int) -> Optional[models.CartItem]:
     item = db.query(models.CartItem).filter(models.CartItem.id == cart_item_id).first()
-    if item:
-        db.delete(item)
-        db.commit()
-    return item
+    # if item:
+    #     db.delete(item)
+    #     db.commit()
+    # return item
+    if not item:
+        return False
+    db.delete(item)
+    db.commit()
+    return True
 
 # ORDER CRUD
 def create_order(db: Session, order: schemas.OrderBase, user_id: int, items: List[schemas.OrderItemBase]) -> models.Order:
@@ -190,6 +202,16 @@ def create_order_from_cart_for_user(db: Session, user_id: int) -> models.Order:
     order.total_amount = total
     db.commit()
     db.refresh(order)
+
+    # Clear the cart items now that the order has been placed
+    for item in cart_items:
+        # If cart items have relationships, remove them safely
+        try:
+            db.delete(item)
+        except Exception:
+            # fallback: ignore deletion error and continue
+            pass
+    db.commit()
 
     return order
 
